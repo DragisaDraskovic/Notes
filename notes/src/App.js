@@ -4,6 +4,7 @@ import Notification from './components/Notification'
 import Footer from './components/Footer'
 import noteService from './services/noteService'
 import loginService from './services/login'
+import LoginForm from './components/Login'
 
 
 const App = () => {
@@ -14,6 +15,7 @@ const App = () => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [user, setUser] = useState(null)
+  const [loginVisible, setLoginVisible] = useState(false)
 
   useEffect(() => {
     noteService
@@ -22,6 +24,15 @@ const App = () => {
         setNotes(initialNotes)
       })
   }, [])
+
+  useEffect(() => {
+    const loggedUserJSON = window.localStorage.getItem('loggedNoteappUser')
+    if( loggedUserJSON ) {
+      const user = JSON.parse(loggedUserJSON)
+      setUser(user)
+      noteService.setToken(user.token)
+    }
+  },[])
   // dodavanje notesa bez noteServices componente
   // const addNote = (event) => {
   //   event.preventDefault()
@@ -124,6 +135,10 @@ const App = () => {
       const user = await loginService.login({
         username, password
       })
+      window.localStorage.setItem(
+        'loggedNoteappUser', JSON.stringify(user)
+      )
+      noteService.setToken(user.token)
       setUser(user)
       setUsername('')
       setPassword('')
@@ -136,31 +151,78 @@ const App = () => {
   }
   
 
+  const loginForm = () => {
+    const hideWhenVisible = { display: loginVisible ? 'none' : ''}
+    const showWhenVisible = { display: loginVisible ? '' : 'none'}
+
+    return (
+      <div>
+        <div style={hideWhenVisible}>
+          <button onClick={() => setLoginVisible(true)}>log in</button>
+        </div>
+        <div style={showWhenVisible}>
+          <LoginForm
+          username={username}
+          password={password}
+          handleUsernameChange={({ target }) => setUsername(target.value)}
+          handlePasswordChange={({ target }) => setPassword(target.value)}
+          handleSubmit = {handleLogin}
+          />
+          <button onClick={() => setLoginVisible(false)}>cancel</button>
+        </div>
+      </div>
+    )
+    // <form onSubmit={handleLogin}>
+    //     <div>
+    //       username 
+    //        <input 
+    //       type="text" 
+    //       value={username} 
+    //       name="Username"
+    //       onChange={({ target }) => setUsername(target.value)}
+    //       />
+    //     </div>
+    //     <div>
+    //       password
+    //       <input
+    //       type="password"
+    //       value={password}
+    //       name="Password"
+    //       onChange={({ target }) => setPassword(target.value)}
+    //       />
+    //     </div>
+    //     <button type="submit">login</button>
+    //   </form>
+  }
+
+  const noteForm = () => (
+    <form onSubmit={addNote}>
+        <input
+          value={newNote}
+          onChange={handleNoteChange}
+        />
+        <button type="submit">save</button>
+      </form>
+  )
   return (
     <div>
       <h1>Notes</h1>
       <Notification message={errorMessage} />
-      <form onSubmit={handleLogin}>
-        <div>
-          username 
-           <input 
-          type="text" 
-          value={username} 
-          name="Username"
-          onChange={({ target }) => setUsername(target.value)}
-          />
+{/*       
+      {user === null && loginForm()}
+      {user !== null && noteForm()} */}
+
+      {/* ovo je isto kao i ovo gore samo pomocu conditional operatora*/}
+
+      {/* {user === null ? loginForm() : noteForm()} */}
+
+      {!user && loginForm()}
+      {user && <div>
+        <p>{user.name} logged in</p>
+          {noteForm()}
         </div>
-        <div>
-          password
-          <input
-          type="password"
-          value={password}
-          name="Password"
-          onChange={({ target }) => setPassword(target.value)}
-          />
-        </div>
-        <button type="submit">login</button>
-      </form>
+        }
+
       <div>
         <button onClick={() => setShowAll(!showAll)}>
           show {showAll ? 'important' : 'all' }
@@ -175,13 +237,6 @@ const App = () => {
           />
         )}
       </ul>
-      <form onSubmit={addNote}>
-        <input
-          value={newNote}
-          onChange={handleNoteChange}
-        />
-        <button type="submit">save</button>
-      </form>
       <Footer />
     </div>
   )
